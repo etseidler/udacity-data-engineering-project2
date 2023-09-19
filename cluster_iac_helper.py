@@ -1,3 +1,4 @@
+"""Helper script to create and destroy Redshift cluster and ancillary resources."""
 import argparse
 import configparser
 import json
@@ -60,6 +61,7 @@ redshift_client = boto3.client(
 
 
 def create_iam_role():
+    """Create IAM role needed for cluster creation."""
     try:
         _ = iam_client.create_role(
             Path="/",
@@ -93,12 +95,14 @@ def create_iam_role():
 
 
 def cluster_props():
+    """Get properties of an existing cluster."""
     return redshift_client.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)[
         "Clusters"
     ][0]
 
 
 def create_cluster(roleArn):
+    """Create a Redshift cluster."""
     try:
         _ = redshift_client.create_cluster(
             ClusterType=DWH_CLUSTER_TYPE,
@@ -130,6 +134,7 @@ def create_cluster(roleArn):
 
 
 def verify_redshift_connection(dwh_endpoint):
+    """Make a connection with an existing Redshift cluster."""
     try:
         vpc = ec2_resource.Vpc(id=cluster_props()["VpcId"])
         defaultSg = list(vpc.security_groups.all())[0]
@@ -158,6 +163,7 @@ def verify_redshift_connection(dwh_endpoint):
 
 
 def destroy_cluster():
+    """Destroy an existing Redshift cluster."""
     redshift_client.delete_cluster(
         ClusterIdentifier=DWH_CLUSTER_IDENTIFIER, SkipFinalClusterSnapshot=True
     )
@@ -175,6 +181,7 @@ def destroy_cluster():
 
 
 def destroy_iam_role():
+    """Destroy the IAM role used to create the Redshift cluster."""
     try:
         iam_client.detach_role_policy(
             RoleName=DWH_IAM_ROLE_NAME,
@@ -187,6 +194,7 @@ def destroy_iam_role():
 
 
 if __name__ == "__main__":
+    """Create or destroy a Redshift cluster."""
     parser = argparse.ArgumentParser(
         description="Helper script to create and destroy Redshift cluster"
     )

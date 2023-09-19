@@ -1,3 +1,4 @@
+"""Contains all the SQL queries used in the ETL job."""
 import configparser
 
 # CONFIG
