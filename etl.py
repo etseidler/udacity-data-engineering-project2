@@ -21,7 +21,11 @@ def main():
 
     conn = psycopg2.connect(
         "host={} dbname={} user={} password={} port={}".format(
-            *config["CLUSTER"].values()
+            config.get("CLUSTER", "DB_HOST"),
+            config.get("CLUSTER", "DB_NAME"),
+            config.get("CLUSTER", "DB_USER"),
+            config.get("CLUSTER", "DB_PASSWORD"),
+            config.get("CLUSTER", "DB_PORT")
         )
     )
     cur = conn.cursor()
