@@ -141,7 +141,7 @@ def verify_redshift_connection(dwh_endpoint):
             ToPort=int(DWH_DB_PORT),
         )
     except Exception as e:
-        print("Failed to authorize ingress? Or we already did it")
+        print("Failed to authorize ingress? Or it's already been done")
 
     try:
         conn = psycopg2.connect(
@@ -187,9 +187,6 @@ def destroy_iam_role():
 
 
 if __name__ == "__main__":
-    import argparse
-
-    # Instantiate the parser
     parser = argparse.ArgumentParser(
         description="Helper script to create and destroy Redshift cluster"
     )
@@ -215,9 +212,12 @@ if __name__ == "__main__":
     if args.create:
         role_arn = create_iam_role()
         dwh_endpoint, dwh_role_arn = create_cluster(role_arn)
+
     if args.verify:
         verify_redshift_connection(args.verify)
+
     if args.destroy or args.exterminate:
         destroy_cluster()
+
     if args.exterminate:
         destroy_iam_role()
