@@ -156,10 +156,11 @@ def verify_redshift_connection(dwh_endpoint):
             user=DWH_DB_USER,
             password=DWH_DB_PASSWORD,
         )
-    except Exception as err:
-        print(err)
-    print(conn)
-    print("LGTM!")
+        print(conn)
+        print("LGTM!")
+    except Exception:
+        print("Failed to connect to the cluster.")
+        print("Double-check the cluster host, but it's probably been torn down.")
 
 
 def destroy_cluster():
