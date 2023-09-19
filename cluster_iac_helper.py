@@ -3,12 +3,14 @@ import json
 import time
 
 import boto3
+from botocore.exceptions import ClientError
+import psycopg2
 
 US_EAST_1 = 'us-east-1'
 AVAILABLE = 'available'
 DELETING = 'deleting'
-CLUSTER_CREATE_POLL_TIME_MINUTES = 3
-CLUSTER_DELETE_POLL_TIME_MINUTES = 2
+CLUSTER_CREATE_POLL_TIME_MINUTES = 1
+CLUSTER_DELETE_POLL_TIME_SECONDS = 15
 
 config = configparser.ConfigParser()
 config.read_file(open('dwh.cfg'))
@@ -22,7 +24,7 @@ DWH_CLUSTER_TYPE        = config.get("CLUSTER", "TYPE")
 DWH_CLUSTER_IDENTIFIER  = config.get("CLUSTER", "IDENTIFIER")
 DWH_NUM_NODES           = config.get("CLUSTER", "NUM_NODES")
 DWH_NODE_TYPE           = config.get("CLUSTER", "NODE_TYPE")
-# DHW_HOST                = config.get("CLUSTER", "DB_HOST")
+
 DWH_DB                  = config.get("CLUSTER", "DB_NAME")
 DWH_DB_USER             = config.get("CLUSTER", "DB_USER")
 DWH_DB_PASSWORD         = config.get("CLUSTER", "DB_PASSWORD")
@@ -40,13 +42,13 @@ s3_resource = boto3.resource(
     aws_access_key_id=AWS_KEY,
     aws_secret_access_key=AWS_SECRET
 )
-iam_resource = boto3.client(
+iam_client = boto3.client(
     'iam',
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
     aws_secret_access_key=AWS_SECRET
 )
-redshift_resource = boto3.client(
+redshift_client = boto3.client(
     'redshift',
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
@@ -55,7 +57,7 @@ redshift_resource = boto3.client(
 
 def create_iam_role():
     try:
-        _ = iam_resource.create_role(
+        _ = iam_client.create_role(
             Path='/',
             RoleName=DWH_IAM_ROLE_NAME,
             Description = "Allows Redshift clusters to call AWS services on your behalf.",
@@ -73,25 +75,25 @@ def create_iam_role():
     except Exception as e:
         print(e)
 
-    iam_resource.attach_role_policy(
+    iam_client.attach_role_policy(
         RoleName=DWH_IAM_ROLE_NAME,
         PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
     )['ResponseMetadata']['HTTPStatusCode']
 
-    role_arn = iam_resource.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
+    role_arn = iam_client.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
     config.set("IAM_ROLE", "ARN", role_arn)
     print(f"role_arn: {role_arn}")
     return role_arn
 
 
 def cluster_props():
-    return redshift_resource.describe_clusters(
+    return redshift_client.describe_clusters(
         ClusterIdentifier=DWH_CLUSTER_IDENTIFIER
     )['Clusters'][0]
 
 def create_cluster(roleArn):
     try:
-        _ = redshift_resource.create_cluster(
+        _ = redshift_client.create_cluster(
             ClusterType=DWH_CLUSTER_TYPE,
             NodeType=DWH_NODE_TYPE,
             NumberOfNodes=int(DWH_NUM_NODES),
@@ -106,6 +108,7 @@ def create_cluster(roleArn):
     except Exception as e:
         print(e)
 
+    print("Creating cluster, please wait...")
     while True:
         cluster_status = cluster_props()['ClusterStatus']
         if cluster_status == AVAILABLE:
@@ -120,32 +123,61 @@ def create_cluster(roleArn):
     print("dwh_role_arn: ", dwh_role_arn)
     return (dwh_endpoint, dwh_role_arn)
 
+def verify_redshift_connection(dwh_endpoint):
+    try:
+        vpc = ec2_resource.Vpc(id=cluster_props()['VpcId'])
+        defaultSg = list(vpc.security_groups.all())[0]
+        defaultSg.authorize_ingress(
+            GroupName=defaultSg.group_name,
+            CidrIp='0.0.0.0/0',
+            IpProtocol='TCP',
+            FromPort=int(DWH_DB_PORT),
+            ToPort=int(DWH_DB_PORT)
+        )
+    except Exception as e:
+        print("Failed to authorize ingress? Or we already did it")
+
+    try:
+        conn = psycopg2.connect(
+            dbname = DWH_DB,
+            host = dwh_endpoint,
+            port = DWH_DB_PORT,
+            user = DWH_DB_USER,
+            password = DWH_DB_PASSWORD,
+        )
+    except Exception as err:
+        print(err)
+    print(conn)
+
 def destroy_cluster():
-    redshift_resource.delete_cluster(
+    redshift_client.delete_cluster(
         ClusterIdentifier=DWH_CLUSTER_IDENTIFIER,
         SkipFinalClusterSnapshot=True
     )
 
-    while True:
-        cluster_status = cluster_props()['ClusterStatus']
-        if cluster_status != DELETING:
-            break
-        time.sleep(CLUSTER_DELETE_POLL_TIME_MINUTES * 60)
-        print("Waiting for cluster destruction...")
-    print("Cluster has been destroyed.")
+    print("Destroying Cluster, please wait...")
+    try:
+        while True:
+            cluster_status = cluster_props()['ClusterStatus']
+            if cluster_status != DELETING:
+                break
+            time.sleep(CLUSTER_DELETE_POLL_TIME_SECONDS)
+            print("Waiting for cluster destruction...")
+    except ClientError:
+        print("Cluster has been destroyed.")
 
 def destroy_iam_role():
-    iam_resource.detach_role_policy(
+    iam_client.detach_role_policy(
         RoleName=DWH_IAM_ROLE_NAME,
         PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
     )
-    iam_resource.delete_role(
+    iam_client.delete_role(
         RoleName=DWH_IAM_ROLE_NAME
     )
 
-
-role_arn = create_iam_role()
-create_cluster(role_arn)
-# verify that we can connect to the cluster?
-# destroy_cluster()
-# destroy_iam_role()
+if __name__ == "__main__":
+    role_arn = create_iam_role()
+    dwh_endpoint, dwh_role_arn = create_cluster(role_arn)
+    verify_redshift_connection(dwh_endpoint)
+    destroy_cluster()
+    destroy_iam_role()
