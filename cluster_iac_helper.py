@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import json
 import time
@@ -148,6 +149,7 @@ def verify_redshift_connection(dwh_endpoint):
     except Exception as err:
         print(err)
     print(conn)
+    print("LGTM!")
 
 def destroy_cluster():
     redshift_client.delete_cluster(
@@ -167,17 +169,35 @@ def destroy_cluster():
         print("Cluster has been destroyed.")
 
 def destroy_iam_role():
-    iam_client.detach_role_policy(
-        RoleName=DWH_IAM_ROLE_NAME,
-        PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-    )
-    iam_client.delete_role(
-        RoleName=DWH_IAM_ROLE_NAME
-    )
+    try:
+        iam_client.detach_role_policy(
+            RoleName=DWH_IAM_ROLE_NAME,
+            PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        )
+        iam_client.delete_role(
+            RoleName=DWH_IAM_ROLE_NAME
+        )
+    except ClientError as ce:
+        print("Failed to destroy IAM role")
+        print(ce)
 
 if __name__ == "__main__":
-    role_arn = create_iam_role()
-    dwh_endpoint, dwh_role_arn = create_cluster(role_arn)
-    verify_redshift_connection(dwh_endpoint)
-    destroy_cluster()
-    destroy_iam_role()
+    import argparse
+
+# Instantiate the parser
+    parser = argparse.ArgumentParser(description='Helper script to create and destroy Redshift cluster')
+    parser.add_argument('-c', '--create', action='store_true', help='Create the cluster')
+    parser.add_argument('-d', '--destroy', action='store_true', help='Destroy the cluster')
+    parser.add_argument('-v', '--verify', help="Verify connection to an existing cluster via cluster endpoint")
+    parser.add_argument('-x', '--exterminate', action='store_true', help='Destroy the cluster and the IAM role')
+    args = parser.parse_args()
+
+    if args.create:
+        role_arn = create_iam_role()
+        dwh_endpoint, dwh_role_arn = create_cluster(role_arn)
+    if args.verify:
+        verify_redshift_connection(args.verify)
+    if args.destroy or args.exterminate:
+        destroy_cluster()
+    if args.exterminate:
+        destroy_iam_role()
