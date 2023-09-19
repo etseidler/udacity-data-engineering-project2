@@ -7,15 +7,16 @@ import boto3
 import psycopg2
 from botocore.exceptions import ClientError
 
-US_EAST_1 = 'us-east-1'
-AVAILABLE = 'available'
-DELETING = 'deleting'
+US_EAST_1 = "us-east-1"
+AVAILABLE = "available"
+DELETING = "deleting"
 CLUSTER_CREATE_POLL_TIME_MINUTES = 1
 CLUSTER_DELETE_POLL_TIME_SECONDS = 15
 
 config = configparser.ConfigParser()
-config.read_file(open('dwh.cfg'))
+config.read_file(open("dwh.cfg"))
 
+# fmt: off
 AWS_KEY                 = config.get('AWS','KEY')
 AWS_SECRET              = config.get('AWS','SECRET')
 
@@ -30,67 +31,72 @@ DWH_DB                  = config.get("CLUSTER", "DB_NAME")
 DWH_DB_USER             = config.get("CLUSTER", "DB_USER")
 DWH_DB_PASSWORD         = config.get("CLUSTER", "DB_PASSWORD")
 DWH_DB_PORT             = config.get("CLUSTER", "DB_PORT")
+# fmt: on
 
 ec2_resource = boto3.resource(
-    'ec2',
+    "ec2",
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
-    aws_secret_access_key=AWS_SECRET
+    aws_secret_access_key=AWS_SECRET,
 )
 s3_resource = boto3.resource(
-    's3',
+    "s3",
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
-    aws_secret_access_key=AWS_SECRET
+    aws_secret_access_key=AWS_SECRET,
 )
 iam_client = boto3.client(
-    'iam',
+    "iam",
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
-    aws_secret_access_key=AWS_SECRET
+    aws_secret_access_key=AWS_SECRET,
 )
 redshift_client = boto3.client(
-    'redshift',
+    "redshift",
     region_name=US_EAST_1,
     aws_access_key_id=AWS_KEY,
-    aws_secret_access_key=AWS_SECRET
+    aws_secret_access_key=AWS_SECRET,
 )
+
 
 def create_iam_role():
     try:
         _ = iam_client.create_role(
-            Path='/',
+            Path="/",
             RoleName=DWH_IAM_ROLE_NAME,
-            Description = "Allows Redshift clusters to call AWS services on your behalf.",
-            AssumeRolePolicyDocument=json.dumps({
-                'Statement': [
-                    {
-                        'Action': 'sts:AssumeRole',
-                        'Effect': 'Allow',
-                        'Principal': { 'Service': 'redshift.amazonaws.com' }
-                    }
-                ],
-                'Version': '2012-10-17'
-            })
+            Description="Allows Redshift clusters to call AWS services on your behalf.",
+            AssumeRolePolicyDocument=json.dumps(
+                {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {"Service": "redshift.amazonaws.com"},
+                        }
+                    ],
+                    "Version": "2012-10-17",
+                }
+            ),
         )
     except Exception as e:
         print(e)
 
     iam_client.attach_role_policy(
         RoleName=DWH_IAM_ROLE_NAME,
-        PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-    )['ResponseMetadata']['HTTPStatusCode']
+        PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+    )["ResponseMetadata"]["HTTPStatusCode"]
 
-    role_arn = iam_client.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
+    role_arn = iam_client.get_role(RoleName=DWH_IAM_ROLE_NAME)["Role"]["Arn"]
     config.set("IAM_ROLE", "ARN", role_arn)
     print(f"role_arn: {role_arn}")
     return role_arn
 
 
 def cluster_props():
-    return redshift_client.describe_clusters(
-        ClusterIdentifier=DWH_CLUSTER_IDENTIFIER
-    )['Clusters'][0]
+    return redshift_client.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)[
+        "Clusters"
+    ][0]
+
 
 def create_cluster(roleArn):
     try:
@@ -98,69 +104,68 @@ def create_cluster(roleArn):
             ClusterType=DWH_CLUSTER_TYPE,
             NodeType=DWH_NODE_TYPE,
             NumberOfNodes=int(DWH_NUM_NODES),
-
             DBName=DWH_DB,
             ClusterIdentifier=DWH_CLUSTER_IDENTIFIER,
             MasterUsername=DWH_DB_USER,
             MasterUserPassword=DWH_DB_PASSWORD,
-
-            IamRoles=[roleArn]
+            IamRoles=[roleArn],
         )
     except Exception as e:
         print(e)
 
     print("Creating cluster, please wait...")
     while True:
-        cluster_status = cluster_props()['ClusterStatus']
+        cluster_status = cluster_props()["ClusterStatus"]
         if cluster_status == AVAILABLE:
             break
         time.sleep(CLUSTER_CREATE_POLL_TIME_MINUTES * 60)
         print("Waiting for cluster creation...")
     print("Cluster has been created.")
 
-    dwh_endpoint = cluster_props()['Endpoint']['Address']
-    dwh_role_arn = cluster_props()['IamRoles'][0]['IamRoleArn']
+    dwh_endpoint = cluster_props()["Endpoint"]["Address"]
+    dwh_role_arn = cluster_props()["IamRoles"][0]["IamRoleArn"]
     print("dwh_endpoint: ", dwh_endpoint)
     print("dwh_role_arn: ", dwh_role_arn)
     return (dwh_endpoint, dwh_role_arn)
 
+
 def verify_redshift_connection(dwh_endpoint):
     try:
-        vpc = ec2_resource.Vpc(id=cluster_props()['VpcId'])
+        vpc = ec2_resource.Vpc(id=cluster_props()["VpcId"])
         defaultSg = list(vpc.security_groups.all())[0]
         defaultSg.authorize_ingress(
             GroupName=defaultSg.group_name,
-            CidrIp='0.0.0.0/0',
-            IpProtocol='TCP',
+            CidrIp="0.0.0.0/0",
+            IpProtocol="TCP",
             FromPort=int(DWH_DB_PORT),
-            ToPort=int(DWH_DB_PORT)
+            ToPort=int(DWH_DB_PORT),
         )
     except Exception as e:
         print("Failed to authorize ingress? Or we already did it")
 
     try:
         conn = psycopg2.connect(
-            dbname = DWH_DB,
-            host = dwh_endpoint,
-            port = DWH_DB_PORT,
-            user = DWH_DB_USER,
-            password = DWH_DB_PASSWORD,
+            dbname=DWH_DB,
+            host=dwh_endpoint,
+            port=DWH_DB_PORT,
+            user=DWH_DB_USER,
+            password=DWH_DB_PASSWORD,
         )
     except Exception as err:
         print(err)
     print(conn)
     print("LGTM!")
 
+
 def destroy_cluster():
     redshift_client.delete_cluster(
-        ClusterIdentifier=DWH_CLUSTER_IDENTIFIER,
-        SkipFinalClusterSnapshot=True
+        ClusterIdentifier=DWH_CLUSTER_IDENTIFIER, SkipFinalClusterSnapshot=True
     )
 
     print("Destroying Cluster, please wait...")
     try:
         while True:
-            cluster_status = cluster_props()['ClusterStatus']
+            cluster_status = cluster_props()["ClusterStatus"]
             if cluster_status != DELETING:
                 break
             time.sleep(CLUSTER_DELETE_POLL_TIME_SECONDS)
@@ -168,28 +173,43 @@ def destroy_cluster():
     except ClientError:
         print("Cluster has been destroyed.")
 
+
 def destroy_iam_role():
     try:
         iam_client.detach_role_policy(
             RoleName=DWH_IAM_ROLE_NAME,
-            PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+            PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
         )
-        iam_client.delete_role(
-            RoleName=DWH_IAM_ROLE_NAME
-        )
+        iam_client.delete_role(RoleName=DWH_IAM_ROLE_NAME)
     except ClientError as ce:
         print("Failed to destroy IAM role")
         print(ce)
 
+
 if __name__ == "__main__":
     import argparse
 
-# Instantiate the parser
-    parser = argparse.ArgumentParser(description='Helper script to create and destroy Redshift cluster')
-    parser.add_argument('-c', '--create', action='store_true', help='Create the cluster')
-    parser.add_argument('-d', '--destroy', action='store_true', help='Destroy the cluster')
-    parser.add_argument('-v', '--verify', help="Verify connection to an existing cluster via cluster endpoint")
-    parser.add_argument('-x', '--exterminate', action='store_true', help='Destroy the cluster and the IAM role')
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(
+        description="Helper script to create and destroy Redshift cluster"
+    )
+    parser.add_argument(
+        "-c", "--create", action="store_true", help="Create the cluster"
+    )
+    parser.add_argument(
+        "-d", "--destroy", action="store_true", help="Destroy the cluster"
+    )
+    parser.add_argument(
+        "-v",
+        "--verify",
+        help="Verify connection to an existing cluster via cluster endpoint",
+    )
+    parser.add_argument(
+        "-x",
+        "--exterminate",
+        action="store_true",
+        help="Destroy the cluster and the IAM role",
+    )
     args = parser.parse_args()
 
     if args.create:

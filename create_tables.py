@@ -27,7 +27,7 @@ def main():
             config.get("CLUSTER", "DB_NAME"),
             config.get("CLUSTER", "DB_USER"),
             config.get("CLUSTER", "DB_PASSWORD"),
-            config.get("CLUSTER", "DB_PORT")
+            config.get("CLUSTER", "DB_PORT"),
         )
     )
     cur = conn.cursor()
