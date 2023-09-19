@@ -48,7 +48,8 @@ user_table_create = """
         "first_name"    character varying(100) NOT NULL,
         "last_name"     character varying(100) NOT NULL,
         "gender"        char(1) NOT NULL,
-        "level"         character varying(30) NOT NULL
+        "level"         character varying(30) NOT NULL,
+        primary key(user_key)
     );
 """
 
@@ -58,7 +59,8 @@ song_table_create = """
         "title"         text NOT NULL,
         "artist_key"    character varying(30) NOT NULL,
         "year"          smallint NOT NULL,
-        "duration"      double precision NOT NULL
+        "duration"      double precision NOT NULL,
+        primary key(song_key)
     );
 """
 
@@ -68,7 +70,8 @@ artist_table_create = """
         "artist_name"   text NOT NULL,
         "artist_loc"    text,
         "artist_lat"    double precision,
-        "artist_long"   double precision
+        "artist_long"   double precision,
+        primary key(artist_key)
     );
 """
 
@@ -80,7 +83,8 @@ time_table_create = """
         "week"          smallint NOT NULL,
         "month"         smallint NOT NULL,
         "year"          smallint NOT NULL,
-        "weekday" ???
+        "weekday"       smallint NOT NULL,
+        primary key(time_key)
     );
 """
 
@@ -115,13 +119,13 @@ time_table_insert = """
 
 # QUERY LISTS
 
-# create_table_queries = [staging_events_table_create, staging_songs_table_create, songplay_table_create, user_table_create, song_table_create, artist_table_create, time_table_create]
+# create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
 create_table_queries = [
-    songplay_table_create,
     user_table_create,
     song_table_create,
     artist_table_create,
     time_table_create,
+    songplay_table_create
 ]
 drop_table_queries = [
     staging_events_table_drop,
