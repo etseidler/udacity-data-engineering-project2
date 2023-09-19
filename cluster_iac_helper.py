@@ -140,7 +140,7 @@ def verify_redshift_connection(dwh_endpoint):
             FromPort=int(DWH_DB_PORT),
             ToPort=int(DWH_DB_PORT),
         )
-    except Exception as e:
+    except Exception:
         print("Failed to authorize ingress? Or it's already been done")
 
     try:
