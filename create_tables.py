@@ -37,6 +37,8 @@ def main():
 
     conn.close()
 
+    print("Created tables.")
+
 
 if __name__ == "__main__":
     main()
