@@ -4,8 +4,8 @@ import json
 import time
 
 import boto3
-from botocore.exceptions import ClientError
 import psycopg2
+from botocore.exceptions import ClientError
 
 US_EAST_1 = 'us-east-1'
 AVAILABLE = 'available'
