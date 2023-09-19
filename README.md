@@ -17,3 +17,31 @@ Provide example queries and results for song play analysis. We do not provide yo
 ## Files in the repository
 
 ## Config File NOT in the repository
+
+The file `dwh.cfg` will need to be created and populated. Some of the data in this config file is sensitive; that's why the file wasn't checked in to source control. You can copy/paste the text below and fill in the `???` values with the correct ones when you run the code locally. You'll need your own Amazon creds and cluster config settings to do this.
+
+```
+[AWS]
+KEY=???
+SECRET=???
+
+[CLUSTER]
+IDENTIFIER=???
+DB_HOST=???
+DB_NAME=???
+DB_USER=???
+DB_PASSWORD=???
+DB_PORT=???
+TYPE=multi-node
+NUM_NODES=4
+NODE_TYPE=dc2.large
+
+[IAM_ROLE]
+ARN=???
+NAME=???
+
+[S3]
+LOG_DATA='s3://udacity-dend/log_data'
+LOG_JSONPATH='s3://udacity-dend/log_json_path.json'
+SONG_DATA='s3://udacity-dend/song_data'
+```
