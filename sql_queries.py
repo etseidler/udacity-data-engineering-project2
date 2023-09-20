@@ -128,7 +128,8 @@ time_table_create = """
 # STAGING TABLES
 
 staging_events_copy = """
-    copy staging_events FROM 's3://udacity-dend/log_data'
+    copy staging_events
+    from 's3://udacity-dend/log_data'
     credentials 'aws_iam_role={}'
     region 'us-west-2'
     json 's3://udacity-dend/log_json_path.json';
@@ -137,10 +138,11 @@ staging_events_copy = """
 )
 
 staging_songs_copy = """
-    copy staging_songs FROM 's3://udacity-dend/song_data'
+    copy staging_songs
+    from 's3://udacity-dend/song_data'
     credentials 'aws_iam_role={}'
     region 'us-west-2'
-    json 'auto ignorecase';
+    json 'auto';
 """.format(
     DWH_ROLE_ARN
 )
