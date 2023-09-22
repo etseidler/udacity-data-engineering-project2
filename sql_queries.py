@@ -67,8 +67,8 @@ songplay_table_create = """
         "time_key"      timestamp NOT NULL,
         "user_key"      int NOT NULL,
         "level"         character varying(30) NOT NULL,
-        "song_key"      character varying(30) NOT NULL,
-        "artist_key"    character varying(30) NOT NULL,
+        "song_key"      character varying(30),
+        "artist_key"    character varying(30),
         "session_id"    int NOT NULL,
         "location"      text,
         "user_agent"    text,
@@ -95,7 +95,7 @@ song_table_create = """
     CREATE TABLE IF NOT EXISTS "dimSong" (
         "song_key"      character varying(30) NOT NULL,
         "title"         text,
-        "artist_key"    character varying(30) NOT NULL,
+        "artist_key"    character varying(30),
         "year"          smallint NOT NULL,
         "duration"      double precision NOT NULL,
         primary key(song_key)
@@ -153,62 +153,74 @@ staging_songs_copy = """
 songplay_table_insert = """
 INSERT INTO factsSongplay (time_key, user_key, level, song_key, artist_key, session_id, location, user_agent)
 SELECT
-    DISTINCT(TO_CHAR(se.ts :: DATE, 'yyyyMMDDHH24:MI:SS')::integer)     AS time_key,
-    se.userId                                                           AS user_key,
-    se.level                                                            AS level,
-    ss.song_id                                                          AS song_key,
-    ss.artist_id                                                        AS artist_key,
-    se.sessionId                                                        AS session_id,
-    se.location                                                         AS location,
-    se.user_agent                                                       AS user_agent
-FROM staging_events se
-JOIN staging_songs ss   ON ( se.song = ss.title );
+    se.start_ts     AS time_key,
+    se.userId       AS user_key,
+    se.level        AS level,
+    ss.song_id      AS song_key,
+    ss.artist_id    AS artist_key,
+    se.sessionId    AS session_id,
+    se.location     AS location,
+    se.userAgent    AS user_agent
+FROM (
+    SELECT TIMESTAMP 'epoch' + staging_events.ts / 1000 * INTERVAL '1 second' AS start_ts, *
+    FROM staging_events
+    WHERE page='NextSong'
+) se
+LEFT JOIN staging_songs ss
+ON (
+    se.song = ss.title
+    AND se.artist = ss.artist_name
+    AND se.length = ss.duration
+);
 """
 
 user_table_insert = """
 INSERT INTO dimUser (user_key, first_name, last_name, gender, level)
 SELECT
-    se.userId       AS user_key,
+    DISTINCT(se.userId)       AS user_key,
     se.firstName    AS first_name,
     se.lastName     AS last_name,
     se.gender       AS gender,
     se.level        AS level
-FROM staging_events se;
+FROM staging_events se
+WHERE page='NextSong';
 """
 
 song_table_insert = """
 INSERT INTO dimSong (song_key, title, artist_key, year, duration)
 SELECT
-    ss.song_id      AS song_key,
-    ss.title        AS title,
-    ss.artist_id    AS artist_key,
-    ss.year         AS year,
-    ss.duration     AS duration
-FROM staging_songs ss;
+    DISTINCT(ss.song_id)    AS song_key,
+    ss.title                AS title,
+    ss.artist_id            AS artist_key,
+    ss.year                 AS year,
+    ss.duration             AS duration
+FROM staging_songs ss
+WHERE song_id IS NOT NULL;
 """
 
 artist_table_insert = """
 INSERT INTO dimArtist (artist_key, artist_name, artist_loc, artist_lat, artist_long)
 SELECT
-    ss.artist_id        AS artist_key,
-    ss.artist_name      AS artist_name,
-    ss.artist_location  AS artist_loc,
-    ss.artist_latitude  AS artist_lat,
-    ss.artist_longitude AS artist_long
-FROM staging_songs ss;
+    DISTINCT(ss.artist_id)  AS artist_key,
+    ss.artist_name          AS artist_name,
+    ss.artist_location      AS artist_loc,
+    ss.artist_latitude      AS artist_lat,
+    ss.artist_longitude     AS artist_long
+FROM staging_songs ss
+WHERE ss.artist_id IS NOT NULL;
 """
 
 time_table_insert = """
 INSERT INTO dimTime (time_key, hour, day, week, month, year, weekday)
 SELECT
-    DISTINCT(TO_CHAR(se.ts :: DATE, 'yyyyMMDDHH24:MI:SS')::integer) AS time_key
-    EXTRACT(hour FROM se.ts)                                        AS hour,
-    EXTRACT(day FROM se.ts)                                         AS day,
-    EXTRACT(week FROM se.ts)                                        AS week,
-    EXTRACT(month FROM se.ts)                                       AS month,
-    EXTRACT(year FROM se.ts)                                        AS year,
-    EXTRACT(weekday FROM se.ts)                                     AS weekday
-FROM staging_events se;
+    DISTINCT(time_key)              AS time_key,
+    EXTRACT(hour FROM time_key)     AS hour,
+    EXTRACT(day FROM time_key)      AS day,
+    EXTRACT(week FROM time_key)     AS week,
+    EXTRACT(month FROM time_key)    AS month,
+    EXTRACT(year FROM time_key)     AS year,
+    EXTRACT(weekday FROM time_key)  AS weekday
+FROM factsSongplay;
 """
 
 # QUERY LISTS
@@ -232,12 +244,10 @@ drop_table_queries = [
     time_table_drop,
 ]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
-# go through these one at a time and validate results
-# consider: dupes, null data, etc
 insert_table_queries = [
     songplay_table_insert,
-    # user_table_insert,
-    # song_table_insert,
-    # artist_table_insert,
-    # time_table_insert,
+    user_table_insert,
+    song_table_insert,
+    artist_table_insert,
+    time_table_insert,
 ]
