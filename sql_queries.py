@@ -47,7 +47,7 @@ staging_events_table_create = """
 """
 
 staging_songs_table_create = """
-    CREATE TABLE IF NOT EXISTS staging_songs (
+    CREATE TABLE IF NOT EXISTS "staging_songs" (
         num_songs           SMALLINT,
         artist_id           CHARACTER VARYING(30),
         artist_latitude     DOUBLE PRECISION,
