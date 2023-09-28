@@ -12,7 +12,7 @@ Sparkify's analytics team wants to continue finding insights into what songs the
 
 Staging tables were built to hold the raw data in a more structured format. Columns were created and named based on existing column names in the raw data.
 
-The main fact table, `factsSongplay` was created to hold information about each song play in addition to foreign keys tying this fact table to the other dimension tables.
+The main fact table, `songplays` was created to hold information about each song play in addition to foreign keys tying this fact table to the other dimension tables.
 
 `dimTime`, `dimUser`, `dimArtist`, and `dimSong` were created to hold the dimension data. The first attempt at the column data types and constraints were based on looking at the sample data and guidance from the project instructions. Subsequent changes were made in an iterative fashion as the staging and final table insert queries were executed one-by-one during ETL (see below).
 
@@ -20,11 +20,11 @@ The main fact table, `factsSongplay` was created to hold information about each 
 
 `# STAGING TABLES` in `sql_queries.py` takes care of moving the data from S3 into the staging tables. In both queries, JSON was the source data format, and region was specified since the raw data was located in a region that was different from the cluster region. A JSON metadata was specified as needed for the `staging_events` table.
 
-`factSongplay` was the big lift here in terms of getting the ETL right. Filtering the song plays based on `page=NextSong` *before* doing the join was crucial for having a reasonable number of final results in that table. My initial take at these columns include more `NOT NULL` conditions, but those were removed as a result of getting errors during the ETL. These errors were related to null data in columns. Ideally, null data would have already been identified before running the ETL, and that's one thing I would have done differently. Lastly, my initial take at ETL for song plays included fewer fields in the join. E.g., I figured matching on only song title would have been enough. But after some thought, I decided that it wouldn't hurt to also match on artist name. The match on duration seems redudant, but shouldn't hurt anything.
+`songplays` was the big lift here in terms of getting the ETL right. Filtering the song plays based on `page=NextSong` *before* doing the join was crucial for having a reasonable number of final results in that table. My initial take at these columns include more `NOT NULL` conditions, but those were removed as a result of getting errors during the ETL. These errors were related to null data in columns. Ideally, null data would have already been identified before running the ETL, and that's one thing I would have done differently. Lastly, my initial take at ETL for song plays included fewer fields in the join. E.g., I figured matching on only song title would have been enough. But after some thought, I decided that it wouldn't hurt to also match on artist name. The match on duration seems redudant, but shouldn't hurt anything.
 
 `dimUser`,`dimSong`, and `dimArtist` were fairly straight-forward and originated from the raw data. There's not much to point out there except ensuring `DISTINCT` values on the primary keys for those tables.
 
-`dimTime` was populated from `factsSongplay` mainly as a convenience for not having to repeatedly convert epoch seconds into a timestamp.
+`dimTime` was populated from `songplays` mainly as a convenience for not having to repeatedly convert epoch seconds into a timestamp.
 
 ## How to run the scripts
 ### Prerequisites
