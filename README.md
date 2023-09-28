@@ -14,7 +14,7 @@ Staging tables were built to hold the raw data in a more structured format. Colu
 
 The main fact table, `songplays` was created to hold information about each song play in addition to foreign keys tying this fact table to the other dimension tables.
 
-`dimTime`, `dimUser`, `dimArtist`, and `dimSong` were created to hold the dimension data. The first attempt at the column data types and constraints were based on looking at the sample data and guidance from the project instructions. Subsequent changes were made in an iterative fashion as the staging and final table insert queries were executed one-by-one during ETL (see below).
+`time`, `users`, `artists`, and `songs` were created to hold the dimension data. The first attempt at the column data types and constraints were based on looking at the sample data and guidance from the project instructions. Subsequent changes were made in an iterative fashion as the staging and final table insert queries were executed one-by-one during ETL (see below).
 
 ### ETL Design
 
@@ -22,9 +22,9 @@ The main fact table, `songplays` was created to hold information about each song
 
 `songplays` was the big lift here in terms of getting the ETL right. Filtering the song plays based on `page=NextSong` *before* doing the join was crucial for having a reasonable number of final results in that table. My initial take at these columns include more `NOT NULL` conditions, but those were removed as a result of getting errors during the ETL. These errors were related to null data in columns. Ideally, null data would have already been identified before running the ETL, and that's one thing I would have done differently. Lastly, my initial take at ETL for song plays included fewer fields in the join. E.g., I figured matching on only song title would have been enough. But after some thought, I decided that it wouldn't hurt to also match on artist name. The match on duration seems redudant, but shouldn't hurt anything.
 
-`dimUser`,`dimSong`, and `dimArtist` were fairly straight-forward and originated from the raw data. There's not much to point out there except ensuring `DISTINCT` values on the primary keys for those tables.
+`users`,`songs`, and `artists` were fairly straight-forward and originated from the raw data. There's not much to point out there except ensuring `DISTINCT` values on the primary keys for those tables.
 
-`dimTime` was populated from `songplays` mainly as a convenience for not having to repeatedly convert epoch seconds into a timestamp.
+`time` was populated from `songplays` mainly as a convenience for not having to repeatedly convert epoch seconds into a timestamp.
 
 ## How to run the scripts
 ### Prerequisites

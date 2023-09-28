@@ -16,10 +16,10 @@ SONG_DATA = config.get("S3", "SONG_DATA")
 staging_events_table_drop = 'DROP TABLE IF EXISTS "staging_events";'
 staging_songs_table_drop = 'DROP TABLE IF EXISTS "staging_songs";'
 songplay_table_drop = 'DROP TABLE IF EXISTS "songplays";'
-user_table_drop = 'DROP TABLE IF EXISTS "dimUser";'
-song_table_drop = 'DROP TABLE IF EXISTS "dimSong";'
-artist_table_drop = 'DROP TABLE IF EXISTS "dimArtist";'
-time_table_drop = 'DROP TABLE IF EXISTS "dimTime";'
+user_table_drop = 'DROP TABLE IF EXISTS "users";'
+song_table_drop = 'DROP TABLE IF EXISTS "songs";'
+artist_table_drop = 'DROP TABLE IF EXISTS "artists";'
+time_table_drop = 'DROP TABLE IF EXISTS "time";'
 
 # CREATE TABLES
 
@@ -73,15 +73,15 @@ songplay_table_create = """
         location                TEXT,
         user_agent              TEXT,
         primary key(id),
-        foreign key(time_key)   references dimTime(time_key),
-        foreign key(user_key)   references dimUser(user_key),
-        foreign key(song_id)    references dimSong(song_id),
-        foreign key(artist_key) references dimArtist(artist_key)
+        foreign key(time_key)   references time(time_key),
+        foreign key(user_key)   references users(user_key),
+        foreign key(song_id)    references songs(song_id),
+        foreign key(artist_key) references artists(artist_key)
     );
 """
 
 user_table_create = """
-    CREATE TABLE IF NOT EXISTS "dimUser" (
+    CREATE TABLE IF NOT EXISTS "users" (
         user_key      INT NOT NULL,
         first_name    CHARACTER VARYING(100),
         last_name     CHARACTER VARYING(100),
@@ -92,7 +92,7 @@ user_table_create = """
 """
 
 song_table_create = """
-    CREATE TABLE IF NOT EXISTS "dimSong" (
+    CREATE TABLE IF NOT EXISTS "songs" (
         song_id       CHARACTER VARYING(30) NOT NULL,
         title         TEXT,
         artist_key    CHARACTER VARYING(30),
@@ -103,7 +103,7 @@ song_table_create = """
 """
 
 artist_table_create = """
-    CREATE TABLE IF NOT EXISTS "dimArtist" (
+    CREATE TABLE IF NOT EXISTS "artists" (
         artist_key    CHARACTER VARYING(30) NOT NULL,
         artist_name   TEXT,
         artist_loc    TEXT,
@@ -114,7 +114,7 @@ artist_table_create = """
 """
 
 time_table_create = """
-    CREATE TABLE IF NOT EXISTS "dimTime" (
+    CREATE TABLE IF NOT EXISTS "time" (
         time_key      TIMESTAMP NOT NULL,
         hour          SMALLINT NOT NULL,
         day           SMALLINT NOT NULL,
@@ -175,7 +175,7 @@ ON (
 """
 
 user_table_insert = """
-INSERT INTO dimUser (user_key, first_name, last_name, gender, level)
+INSERT INTO users (user_key, first_name, last_name, gender, level)
 SELECT
     DISTINCT(se.userId) AS user_key,
     se.firstName        AS first_name,
@@ -187,7 +187,7 @@ WHERE page='NextSong';
 """
 
 song_table_insert = """
-INSERT INTO dimSong (song_id, title, artist_key, year, duration)
+INSERT INTO songs (song_id, title, artist_key, year, duration)
 SELECT
     DISTINCT(ss.song_id)    AS song_id,
     ss.title                AS title,
@@ -199,7 +199,7 @@ WHERE song_id IS NOT NULL;
 """
 
 artist_table_insert = """
-INSERT INTO dimArtist (artist_key, artist_name, artist_loc, artist_lat, artist_long)
+INSERT INTO artists (artist_key, artist_name, artist_loc, artist_lat, artist_long)
 SELECT
     DISTINCT(ss.artist_id)  AS artist_key,
     ss.artist_name          AS artist_name,
@@ -211,7 +211,7 @@ WHERE ss.artist_id IS NOT NULL;
 """
 
 time_table_insert = """
-INSERT INTO dimTime (time_key, hour, day, week, month, year, weekday)
+INSERT INTO time (time_key, hour, day, week, month, year, weekday)
 SELECT
     DISTINCT(time_key)              AS time_key,
     EXTRACT(hour FROM time_key)     AS hour,
