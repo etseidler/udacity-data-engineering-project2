@@ -53,7 +53,7 @@ staging_songs_table_create = """
         artist_latitude     DOUBLE PRECISION,
         artist_longitude    DOUBLE PRECISION,
         artist_location     TEXT,
-        artist_name         TEXT,
+        name         TEXT,
         song_id             CHARACTER VARYING(30),
         title               TEXT,
         duration            DOUBLE PRECISION,
@@ -63,31 +63,31 @@ staging_songs_table_create = """
 
 songplay_table_create = """
     CREATE TABLE IF NOT EXISTS "songplays" (
-        id                      BIGINT IDENTITY(0, 1) NOT NULL,
-        time_key                TIMESTAMP NOT NULL,
-        user_key                INT NOT NULL,
+        songplay_id                      BIGINT IDENTITY(0, 1) NOT NULL,
+        start_time                TIMESTAMP NOT NULL,
+        user_id                INT NOT NULL,
         level                   CHARACTER VARYING(30) NOT NULL,
         song_id                 CHARACTER VARYING(30),
-        artist_key              CHARACTER VARYING(30),
+        artist_id              CHARACTER VARYING(30),
         session_id              INT NOT NULL,
         location                TEXT,
         user_agent              TEXT,
-        primary key(id),
-        foreign key(time_key)   references time(time_key),
-        foreign key(user_key)   references users(user_key),
+        primary key(songplay_id),
+        foreign key(start_time)   references time(start_time),
+        foreign key(user_id)   references users(user_id),
         foreign key(song_id)    references songs(song_id),
-        foreign key(artist_key) references artists(artist_key)
+        foreign key(artist_id) references artists(artist_id)
     );
 """
 
 user_table_create = """
     CREATE TABLE IF NOT EXISTS "users" (
-        user_key      INT NOT NULL,
+        user_id      INT NOT NULL,
         first_name    CHARACTER VARYING(100),
         last_name     CHARACTER VARYING(100),
         gender        CHAR(1),
         level         CHARACTER VARYING(30) NOT NULL,
-        primary key(user_key)
+        primary key(user_id)
     );
 """
 
@@ -95,34 +95,36 @@ song_table_create = """
     CREATE TABLE IF NOT EXISTS "songs" (
         song_id       CHARACTER VARYING(30) NOT NULL,
         title         TEXT,
-        artist_key    CHARACTER VARYING(30),
+        artist_id    CHARACTER VARYING(30),
         year          SMALLINT NOT NULL,
         duration      DOUBLE PRECISION NOT NULL,
         primary key(song_id)
     );
 """
 
+# NOTE: project spec has typo: "lattitude" is incorrect spelling.
+# I intentionally chose the correct spelling for use in column below
 artist_table_create = """
     CREATE TABLE IF NOT EXISTS "artists" (
-        artist_key    CHARACTER VARYING(30) NOT NULL,
-        artist_name   TEXT,
-        artist_loc    TEXT,
-        artist_lat    DOUBLE PRECISION,
-        artist_long   DOUBLE PRECISION,
-        primary key(artist_key)
+        artist_id    CHARACTER VARYING(30) NOT NULL,
+        name   TEXT,
+        location    TEXT,
+        latitude    DOUBLE PRECISION,
+        longitude   DOUBLE PRECISION,
+        primary key(artist_id)
     );
 """
 
 time_table_create = """
     CREATE TABLE IF NOT EXISTS "time" (
-        time_key      TIMESTAMP NOT NULL,
+        start_time      TIMESTAMP NOT NULL,
         hour          SMALLINT NOT NULL,
         day           SMALLINT NOT NULL,
         week          SMALLINT NOT NULL,
         month         SMALLINT NOT NULL,
         year          SMALLINT NOT NULL,
         weekday       SMALLINT NOT NULL,
-        primary key(time_key)
+        primary key(start_time)
     );
 """
 
@@ -151,13 +153,13 @@ staging_songs_copy = """
 # FINAL TABLES
 
 songplay_table_insert = """
-INSERT INTO songplays (time_key, user_key, level, song_id, artist_key, session_id, location, user_agent)
+INSERT INTO songplays (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
 SELECT
-    se.start_ts     AS time_key,
-    se.userId       AS user_key,
+    se.start_ts     AS start_time,
+    se.userId       AS user_id,
     se.level        AS level,
     ss.song_id      AS song_id,
-    ss.artist_id    AS artist_key,
+    ss.artist_id    AS artist_id,
     se.sessionId    AS session_id,
     se.location     AS location,
     se.userAgent    AS user_agent
@@ -169,15 +171,15 @@ FROM (
 LEFT JOIN staging_songs ss
 ON (
     se.song = ss.title
-    AND se.artist = ss.artist_name
+    AND se.artist = ss.name
     AND se.length = ss.duration
 );
 """
 
 user_table_insert = """
-INSERT INTO users (user_key, first_name, last_name, gender, level)
+INSERT INTO users (user_id, first_name, last_name, gender, level)
 SELECT
-    DISTINCT(se.userId) AS user_key,
+    DISTINCT(se.userId) AS user_id,
     se.firstName        AS first_name,
     se.lastName         AS last_name,
     se.gender           AS gender,
@@ -187,11 +189,11 @@ WHERE page='NextSong';
 """
 
 song_table_insert = """
-INSERT INTO songs (song_id, title, artist_key, year, duration)
+INSERT INTO songs (song_id, title, artist_id, year, duration)
 SELECT
     DISTINCT(ss.song_id)    AS song_id,
     ss.title                AS title,
-    ss.artist_id            AS artist_key,
+    ss.artist_id            AS artist_id,
     ss.year                 AS year,
     ss.duration             AS duration
 FROM staging_songs ss
@@ -199,27 +201,27 @@ WHERE song_id IS NOT NULL;
 """
 
 artist_table_insert = """
-INSERT INTO artists (artist_key, artist_name, artist_loc, artist_lat, artist_long)
+INSERT INTO artists (artist_id, name, location, latitude, longitude)
 SELECT
-    DISTINCT(ss.artist_id)  AS artist_key,
-    ss.artist_name          AS artist_name,
-    ss.artist_location      AS artist_loc,
-    ss.artist_latitude      AS artist_lat,
-    ss.artist_longitude     AS artist_long
+    DISTINCT(ss.artist_id)  AS artist_id,
+    ss.name          AS name,
+    ss.artist_location      AS location,
+    ss.artist_latitude      AS latitude,
+    ss.artist_longitude     AS longitude
 FROM staging_songs ss
 WHERE ss.artist_id IS NOT NULL;
 """
 
 time_table_insert = """
-INSERT INTO time (time_key, hour, day, week, month, year, weekday)
+INSERT INTO time (start_time, hour, day, week, month, year, weekday)
 SELECT
-    DISTINCT(time_key)              AS time_key,
-    EXTRACT(hour FROM time_key)     AS hour,
-    EXTRACT(day FROM time_key)      AS day,
-    EXTRACT(week FROM time_key)     AS week,
-    EXTRACT(month FROM time_key)    AS month,
-    EXTRACT(year FROM time_key)     AS year,
-    EXTRACT(weekday FROM time_key)  AS weekday
+    DISTINCT(start_time)              AS start_time,
+    EXTRACT(hour FROM start_time)     AS hour,
+    EXTRACT(day FROM start_time)      AS day,
+    EXTRACT(week FROM start_time)     AS week,
+    EXTRACT(month FROM start_time)    AS month,
+    EXTRACT(year FROM start_time)     AS year,
+    EXTRACT(weekday FROM start_time)  AS weekday
 FROM songplays;
 """
 
