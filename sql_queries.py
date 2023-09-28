@@ -45,34 +45,34 @@ staging_events_table_create = """
 
 staging_songs_table_create = """
     CREATE TABLE IF NOT EXISTS staging_songs (
-        num_songs SMALLINT,
-        artist_id CHARACTER VARYING(30),
-        artist_latitude DOUBLE PRECISION,
-        artist_longitude DOUBLE PRECISION,
-        artist_location TEXT,
-        artist_name TEXT,
-        song_id CHARACTER VARYING(30),
-        title TEXT,
-        duration DOUBLE PRECISION,
-        year SMALLINT
+        num_songs           SMALLINT,
+        artist_id           CHARACTER VARYING(30),
+        artist_latitude     DOUBLE PRECISION,
+        artist_longitude    DOUBLE PRECISION,
+        artist_location     TEXT,
+        artist_name         TEXT,
+        song_id             CHARACTER VARYING(30),
+        title               TEXT,
+        duration            DOUBLE PRECISION,
+        year                SMALLINT
     );
 """
 
 songplay_table_create = """
     CREATE TABLE IF NOT EXISTS "songplays" (
-        id            BIGINT IDENTITY(0, 1) NOT NULL,
-        time_key      TIMESTAMP NOT NULL,
-        user_key      INT NOT NULL,
-        level         CHARACTER VARYING(30) NOT NULL,
-        song_id       CHARACTER VARYING(30),
-        artist_key    CHARACTER VARYING(30),
-        session_id    INT NOT NULL,
-        location      TEXT,
-        user_agent    TEXT,
+        id                      BIGINT IDENTITY(0, 1) NOT NULL,
+        time_key                TIMESTAMP NOT NULL,
+        user_key                INT NOT NULL,
+        level                   CHARACTER VARYING(30) NOT NULL,
+        song_id                 CHARACTER VARYING(30),
+        artist_key              CHARACTER VARYING(30),
+        session_id              INT NOT NULL,
+        location                TEXT,
+        user_agent              TEXT,
         primary key(id),
         foreign key(time_key)   references dimTime(time_key),
         foreign key(user_key)   references dimUser(user_key),
-        foreign key(song_id)   references dimSong(song_id),
+        foreign key(song_id)    references dimSong(song_id),
         foreign key(artist_key) references dimArtist(artist_key)
     );
 """
@@ -174,11 +174,11 @@ ON (
 user_table_insert = """
 INSERT INTO dimUser (user_key, first_name, last_name, gender, level)
 SELECT
-    DISTINCT(se.userId)       AS user_key,
-    se.firstName    AS first_name,
-    se.lastName     AS last_name,
-    se.gender       AS gender,
-    se.level        AS level
+    DISTINCT(se.userId) AS user_key,
+    se.firstName        AS first_name,
+    se.lastName         AS last_name,
+    se.gender           AS gender,
+    se.level            AS level
 FROM staging_events se
 WHERE page='NextSong';
 """
