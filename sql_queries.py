@@ -22,53 +22,53 @@ time_table_drop = 'DROP TABLE IF EXISTS "dimTime";'
 
 staging_events_table_create = """
     CREATE TABLE IF NOT EXISTS "staging_events" (
-        "artist"        text,
-        "auth"          character varying(20),
-        "firstName"     character varying(100),
-        "gender"        char(1),
-        "itemInSession" smallint,
-        "lastName"      character varying(100),
-        "length"        double precision,
-        "level"         character varying(30),
-        "location"      text,
-        "method"        character varying(10),
-        "page"          character varying(30),
-        "registration"  bigint,
-        "sessionId"     int,
-        "song"          text,
-        "status"        smallint,
-        "ts"            bigint,
-        "userAgent"     text,
-        "userId"        int
+        artist        text,
+        auth          character varying(20),
+        firstName     character varying(100),
+        gender        char(1),
+        itemInSession smallint,
+        lastName      character varying(100),
+        length        double precision,
+        level         character varying(30),
+        location      text,
+        method        character varying(10),
+        page          character varying(30),
+        registration  bigint,
+        sessionId     int,
+        song          text,
+        status        smallint,
+        ts            bigint,
+        userAgent     text,
+        userId        int
     );
 """
 
 staging_songs_table_create = """
     CREATE TABLE IF NOT EXISTS staging_songs (
-        "num_songs" smallint,
-        "artist_id" character varying(30),
-        "artist_latitude" double precision,
-        "artist_longitude" double precision,
-        "artist_location" text,
-        "artist_name" text,
-        "song_id" character varying(30),
-        "title" text,
-        "duration" double precision,
-        "year" smallint
+        num_songs smallint,
+        artist_id character varying(30),
+        artist_latitude double precision,
+        artist_longitude double precision,
+        artist_location text,
+        artist_name text,
+        song_id character varying(30),
+        title text,
+        duration double precision,
+        year smallint
     );
 """
 
 songplay_table_create = """
     CREATE TABLE IF NOT EXISTS "songplays" (
-        "id"            bigint IDENTITY(0, 1) NOT NULL,
-        "time_key"      timestamp NOT NULL,
-        "user_key"      int NOT NULL,
-        "level"         character varying(30) NOT NULL,
-        "song_id"      character varying(30),
-        "artist_key"    character varying(30),
-        "session_id"    int NOT NULL,
-        "location"      text,
-        "user_agent"    text,
+        id            bigint IDENTITY(0, 1) NOT NULL,
+        time_key      timestamp NOT NULL,
+        user_key      int NOT NULL,
+        level         character varying(30) NOT NULL,
+        song_id      character varying(30),
+        artist_key    character varying(30),
+        session_id    int NOT NULL,
+        location      text,
+        user_agent    text,
         primary key(id),
         foreign key(time_key)   references dimTime(time_key),
         foreign key(user_key)   references dimUser(user_key),
@@ -79,46 +79,46 @@ songplay_table_create = """
 
 user_table_create = """
     CREATE TABLE IF NOT EXISTS "dimUser" (
-        "user_key"      int NOT NULL,
-        "first_name"    character varying(100),
-        "last_name"     character varying(100),
-        "gender"        char(1),
-        "level"         character varying(30) NOT NULL,
+        user_key      int NOT NULL,
+        first_name    character varying(100),
+        last_name     character varying(100),
+        gender        char(1),
+        level         character varying(30) NOT NULL,
         primary key(user_key)
     );
 """
 
 song_table_create = """
     CREATE TABLE IF NOT EXISTS "dimSong" (
-        "song_id"      character varying(30) NOT NULL,
-        "title"         text,
-        "artist_key"    character varying(30),
-        "year"          smallint NOT NULL,
-        "duration"      double precision NOT NULL,
+        song_id       character varying(30) NOT NULL,
+        title         text,
+        artist_key    character varying(30),
+        year          smallint NOT NULL,
+        duration      double precision NOT NULL,
         primary key(song_id)
     );
 """
 
 artist_table_create = """
     CREATE TABLE IF NOT EXISTS "dimArtist" (
-        "artist_key"    character varying(30) NOT NULL,
-        "artist_name"   text,
-        "artist_loc"    text,
-        "artist_lat"    double precision,
-        "artist_long"   double precision,
+        artist_key    character varying(30) NOT NULL,
+        artist_name   text,
+        artist_loc    text,
+        artist_lat    double precision,
+        artist_long   double precision,
         primary key(artist_key)
     );
 """
 
 time_table_create = """
     CREATE TABLE IF NOT EXISTS "dimTime" (
-        "time_key"      timestamp NOT NULL,
-        "hour"          smallint NOT NULL,
-        "day"           smallint NOT NULL,
-        "week"          smallint NOT NULL,
-        "month"         smallint NOT NULL,
-        "year"          smallint NOT NULL,
-        "weekday"       smallint NOT NULL,
+        time_key      timestamp NOT NULL,
+        hour          smallint NOT NULL,
+        day           smallint NOT NULL,
+        week          smallint NOT NULL,
+        month         smallint NOT NULL,
+        year          smallint NOT NULL,
+        weekday       smallint NOT NULL,
         primary key(time_key)
     );
 """
