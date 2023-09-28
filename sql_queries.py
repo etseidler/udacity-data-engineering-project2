@@ -22,42 +22,39 @@ time_table_drop = 'DROP TABLE IF EXISTS "dimTime";'
 
 staging_events_table_create = """
     CREATE TABLE IF NOT EXISTS "staging_events" (
-        "id"            bigint IDENTITY(0, 1) NOT NULL,
         "artist"        text,
-        "auth"          character varying(20) NOT NULL,
+        "auth"          character varying(20),
         "firstName"     character varying(100),
         "gender"        char(1),
-        "itemInSession" smallint NOT NULL,
+        "itemInSession" smallint,
         "lastName"      character varying(100),
         "length"        double precision,
-        "level"         character varying(30) NOT NULL,
+        "level"         character varying(30),
         "location"      text,
-        "method"        character varying(10) NOT NULL,
-        "page"          character varying(30) NOT NULL,
+        "method"        character varying(10),
+        "page"          character varying(30),
         "registration"  bigint,
-        "sessionId"     int NOT NULL,
+        "sessionId"     int,
         "song"          text,
-        "status"        smallint NOT NULL,
-        "ts"            bigint NOT NULL,
+        "status"        smallint,
+        "ts"            bigint,
         "userAgent"     text,
-        "userId"        int,
-        primary key(id)
+        "userId"        int
     );
 """
 
 staging_songs_table_create = """
     CREATE TABLE IF NOT EXISTS staging_songs (
         "num_songs" smallint,
-        "artist_id" character varying(30) NOT NULL,
+        "artist_id" character varying(30),
         "artist_latitude" double precision,
         "artist_longitude" double precision,
         "artist_location" text,
         "artist_name" text,
-        "song_id" character varying(30) NOT NULL,
-        "title" text NOT NULL,
-        "duration" double precision NOT NULL,
-        "year" smallint NOT NULL,
-        primary key(song_id)
+        "song_id" character varying(30),
+        "title" text,
+        "duration" double precision,
+        "year" smallint
     );
 """
 
